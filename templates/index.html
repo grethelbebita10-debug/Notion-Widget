@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Gallery Widget</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header with refresh and filter buttons -->
+        <div class="header-section">
+            <div class="header-buttons">
+                <button id="refresh-btn" class="refresh-btn" onclick="loadGallery()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Refresh</span>
+                </button>
+                <button id="text-btn" class="text-btn" onclick="toggleFilters()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Filter section with platform and status options -->
+            <div id="filter-section" class="filter-section d-none">
+                <div class="filter-buttons">
+                    <button id="platform-filter-btn" class="dropdown-btn" onclick="togglePlatformFilter()">
+                        <span id="platform-text">All Platforms</span>
+                        <i id="platform-arrow" class="fas fa-chevron-down"></i>
+                    </button>
+                    <button id="status-filter-btn" class="dropdown-btn" onclick="toggleStatusFilter()">
+                        <span id="status-text">Status</span>
+                        <i id="status-arrow" class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <div id="platform-options" class="dropdown-options d-none">
+                    <div class="option-item" data-platform="all" onclick="selectPlatform('all')">
+                        <div class="radio-circle active"></div>
+                        <span>All Platforms <span class="platform-count">0</span></span>
+                    </div>
+                    <!-- Dynamic platform options will be inserted here -->
+                </div>
+                
+                <div id="status-options" class="dropdown-options d-none">
+                    <div class="option-item" data-status="all" onclick="selectStatus('all')">
+                        <div class="radio-square active"></div>
+                        <span>All Status <span class="status-count">0</span></span>
+                    </div>
+                    <!-- Dynamic status options will be inserted here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading, error, and empty states -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+        </div>
+        <div id="error-state" class="error-state d-none">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3>Unable to Load Gallery</h3>
+            <p id="error-message">There was an error loading the gallery. Please try again.</p>
+            <button class="btn btn-primary" onclick="loadGallery()">
+                <i class="fas fa-refresh"></i> Try Again
+            </button>
+        </div>
+        <div id="empty-state" class="empty-state d-none">
+            <div class="empty-icon">
+                <i class="fas fa-images"></i>
+            </div>
+            <h3>No Images Found</h3>
+            <p>No images match your current filter criteria.</p>
+        </div>
+        
+        <!-- 15-slot gallery grid -->
+        <div id="gallery-container" class="gallery-grid d-none">
+            <!-- Images dynamically inserted here -->
+        </div>
+    </div>
+    
+    <!-- Full-screen image modal -->
+    <div id="imageModal" class="image-modal d-none">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="">
+                <button id="prevImage" class="modal-nav modal-nav-left" onclick="prevModalImage()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="nextImage" class="modal-nav modal-nav-right" onclick="nextModalImage()">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="modal-info">
+                <div id="modalTitle"></div>
+                <div id="modalDate"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+Here's a complete technical summary to recreate the Notion Image Gallery Widget:
+
+Project Setup & Dependencies
+Required Packages:
+
+python3, flask, flask-sqlalchemy, gunicorn, notion-client, psycopg2-binary, email-validator
+Environment Variables:
+
+NOTION_INTEGRATION_SECRET - Notion API integration token
+NOTION_DATABASE_ID - Target Notion database ID
+SESSION_SECRET - Optional Flask session key
+File Structure & Contents
+main.py
+from app import app  # noqa: F401
+app.py
+import os
+import logging
+from flask import Flask, render_template, jsonify
+from notion_client import Client
+from werkzeug.middleware.proxy_fix import ProxyFix
+logging.basicConfig(level=logging.DEBUG)
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Initialize Notion client
+notion = Client(auth=os.environ.get("NOTION_INTEGRATION_SECRET"))
+database_id = os.environ.get("NOTION_DATABASE_ID")
+@app.route('/')
+def index():
+    return render_template('index.html')
+@app.route('/api/data')
+def get_data():
+    try:
+        response = notion.databases.query(database_id=database_id)
+        app.logger.debug(f"Notion response: {len(response['results'])} items found")
+        
+        if response['results']:
+            app.logger.debug(f"Sample data structure: {response['results'][0]}")
+        
+        return jsonify(response['results'])
+    except Exception as e:
+        app.logger.error(f"Error fetching data: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+templates/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Gallery Widget</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header with refresh and filter buttons -->
+        <div class="header-section">
+            <div class="header-buttons">
+                <button id="refresh-btn" class="refresh-btn" onclick="loadGallery()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Refresh</span>
+                </button>
+                <button id="text-btn" class="text-btn" onclick="toggleFilters()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Filter section with platform options -->
+            <div id="filter-section" class="filter-section d-none">
+                <button id="platform-filter-btn" class="filter-btn" onclick="togglePlatformFilter()">
+                    <i class="fas fa-filter"></i>
+                    <span>Platform</span>
+                </button>
+                <div id="platform-options" class="platform-options d-none">
+                    <button class="platform-option active" data-platform="all" onclick="filterByPlatform('all')">All Platforms</button>
+                    <button class="platform-option" data-platform="Instagram" onclick="filterByPlatform('Instagram')">Instagram</button>
+                    <button class="platform-option" data-platform="Tiktok" onclick="filterByPlatform('Tiktok')">Tiktok</button>
+                    <button class="platform-option" data-platform="Other" onclick="filterByPlatform('Other')">Other</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading, error, and empty states -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+        </div>
+        <div id="error-state" class="error-state d-none">
+            <p id="error-message"></p>
+        </div>
+        <div id="empty-state" class="empty-state d-none">
+            <p>No images found</p>
+        </div>
+        
+        <!-- 15-slot gallery grid -->
+        <div id="gallery-container" class="gallery-grid d-none">
+            <!-- Images dynamically inserted here -->
+        </div>
+    </div>
+    
+    <!-- Full-screen image modal -->
+    <div id="imageModal" class="image-modal d-none">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="">
+                <button id="prevImage" class="modal-nav modal-nav-left" onclick="prevModalImage()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="nextImage" class="modal-nav modal-nav-right" onclick="nextModalImage()">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="modal-info">
+                <div id="modalTitle"></div>
+                <div id="modalDate"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+Key JavaScript Functions (static/script.js)
+Core functionality:
+
+Data fetching - Fetches from /api/data endpoint
+Multiple image extraction - extractImageUrls() gets all attachments
+Automatic date sorting - Sorts by "Publish Date" descending
+15-slot grid rendering - Fills with images + "No Content" placeholders
+Platform filtering - Instagram, TikTok, Other, All
+Carousel functionality - Shows carousel icon when multiple images
+Hover navigation - Left/right arrows with smart visibility
+Modal view - Full-screen view with navigation
+Date formatting - "Sep 8" format with timezone fix
+Key technical details:
+
+Uses T00:00:00 suffix for date parsing to fix timezone issues
+Tracks current image index per gallery item
+Navigation arrows show/hide based on position (left only if not first image, right only if not last)
+Modal opens with current image from gallery carousel
+ESC key and click-outside to close modal
+CSS Styling (static/style.css)
+Key features:
+
+Instagram-style grid - 5 columns, 4:5 aspect ratio
+Grace & Grow hover effects - Small overlay at bottom with date/title
+Carousel indicators - Top-right corner icon for multiple images
+Hover navigation arrows - Appear on hover with opacity transition
+Responsive design - Mobile-friendly breakpoints
+Modal styling - Full-screen dark overlay with navigation
+Important CSS classes:
+
+.gallery-grid - 5-column grid layout
+.carousel-indicator - Top-right corner carousel icon
+.hover-nav - Navigation arrows with opacity 0, opacity 1 on hover
+.gallery-item-overlay - Bottom overlay with date/title
+.image-modal - Full-screen modal styling
+Notion Database Requirements
+Required fields:
+
+Attachment - File/image field (supports multiple files)
+Name - Title field
+Publish Date - Date field (used for sorting)
+Platform - Multi-select field (All Platforms, Instagram, TikTok, Facebook, LinkedIn, Other (But i would like to add a way that if any change in the name of the options in this property are made are made in the app too, the same way if i add, u add the new option or if i delete an option of the ones i already told u, u do the same in the platform list that is shown in the app))
+Field name variations supported:
+
+Images: 'Image', 'image', 'Photo', 'photo', 'Picture', 'Attachment'
+Dates: 'Publish Date', 'Date', 'Created', 'Last edited time'
+Platform: 'Platform', 'platform', 'Type', 'Category'
+Deployment Configuration
+Workflow command:
+
+gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
+This creates a fully functional Instagram-style gallery that replicates the Grace & Grow widget with all the carousel, modal, and filtering features you requested.
